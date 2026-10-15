@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.0 — 2026-10-16
 
 - Removed the forced scope picker (Codex projects / Shared / Application) from the "Add secret" dialog. Names are now free-form in both the GUI and the CLI; the CLI no longer prepends `Codex.Shared/` to a bare name. Existing secrets created under the old prefixes are unaffected and keep working.
 - Fixed long secret names getting clipped instead of wrapping in the reveal dialog's title.

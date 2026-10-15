@@ -1,10 +1,10 @@
 #define AppName "Codex Vault"
-#define AppVersion "1.5.0"
+#define AppVersion "1.6.0"
 #define AppPublisher "Arkadiusz Pajda"
 #define AppExeName "CodexVault.exe"
-#define PublishDir "..\work\installer-publish-1.5.0"
+#define PublishDir "..\work\installer-publish-1.6.0"
 #ifndef OutputBaseName
-#define OutputBaseName "CodexVault-Setup-1.5.0-win-x64"
+#define OutputBaseName "CodexVault-Setup-1.6.0-win-x64"
 #endif
 
 [Setup]
