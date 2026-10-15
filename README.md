@@ -120,7 +120,10 @@ Project layout:
 - `src/WindowsSecretManager.App` — WPF graphical application;
 - `src/WindowsSecretManager.Cli` — command-line interface;
 - `tests/WindowsSecretManager.Tests` — tests that never access real credentials;
-- `installer` — Inno Setup definition.
+- `installer` — Inno Setup definition;
+- `.github/workflows` — CI (build + test on every push/PR) and the release pipeline (installer, portable zip, checksums, GitHub release on a `v*` tag).
+
+A `v*` tag triggers [`release.yml`](.github/workflows/release.yml): it fails if the tag doesn't match the `AppVersion` already committed in `installer/CodexVault.iss`, so bump the version there and in both `.csproj` files before tagging.
 
 ## Author and license
 
