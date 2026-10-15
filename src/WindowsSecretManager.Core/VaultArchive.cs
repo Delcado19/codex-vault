@@ -49,7 +49,7 @@ public static class VaultArchive
             var key = DeriveKey(password, salt, KdfIterations);
             try
             {
-                using var aes = new AesGcm(key);
+                using var aes = new AesGcm(key, TagSize);
                 aes.Encrypt(nonce, payloadBytes, cipherText, tag, AssociatedData);
                 return JsonSerializer.SerializeToUtf8Bytes(
                     new ArchiveEnvelope(FormatVersion, "aes-256-gcm", materialized.Length, KdfIterations,
@@ -109,7 +109,7 @@ public static class VaultArchive
             var key = DeriveKey(password, salt, envelope.Iterations.Value);
             try
             {
-                using var aes = new AesGcm(key);
+                using var aes = new AesGcm(key, TagSize);
                 aes.Decrypt(nonce, cipherText, tag, payloadBytes, AssociatedData);
             }
             catch (CryptographicException ex)

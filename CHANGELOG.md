@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Migrated all projects from .NET 6 (out of support since 2024-11-12) to .NET 10 LTS.
+- Replaced the deprecated single-argument `AesGcm` constructor with the explicit-tag-size overload in `VaultArchive`.
+
 ## 1.4.1 — 2026-09-13
 
 - Increased the task list's DPI-aware internal checkbox inset so the desktop-shortcut checkbox remains fully visible.

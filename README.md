@@ -115,7 +115,7 @@ Codex Vault does not protect against an administrator, debugger, or malicious pr
 
 ## Build from source
 
-Building requires the .NET 6 SDK on Windows:
+Building requires the .NET 10 SDK on Windows:
 
 ```powershell
 dotnet build .\WindowsSecretManager.sln -c Release
