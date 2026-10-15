@@ -8,6 +8,7 @@
 - Password-less archive export no longer writes secrets as plaintext JSON: it is now encrypted with DPAPI, bound to the exporting Windows account and device. A password-protected export remains the only way to move secrets to another account or machine.
 - Archive export passwords must now be at least `VaultArchive.MinimumPasswordLength` (8) characters, enforced in `VaultArchive.Create` itself rather than only in the GUI.
 - Replaced the Polish UI language with German: `UiLanguage.Polish` is now `UiLanguage.German`, the language toggle switched from "PL" to "DE", and every bilingual string in the GUI (App project only; the CLI was already English-only) was translated from Polish to German.
+- Hardened CLI output: `WindowsSecretManager.Core` (`SecretNames`, `SecretService`, `WindowsCredentialStore`) and the CLI itself still had leftover Polish exception/fallback text (e.g. `Win32Exception` messages, the `version` fallback, a Polish "tak" delete confirmation). These surfaced unlocalized in the English-only CLI and raw in GUI error dialogs; translated to English. Verified by hand that `get` writes the secret only to stdout, no command writes a secret value to stderr or into an exception message, and the existing char-by-char unmanaged-memory write (never materializing the plaintext as a managed string) was left as-is.
 
 ## 1.4.1 — 2026-09-13
 

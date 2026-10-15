@@ -8,7 +8,7 @@ public static class SecretNames
 
     public static readonly IReadOnlyList<string> Suggested = new[]
     {
-        "Codex.Shared/Onet/ImapPassword",
+        "Codex.Shared/GMX/ImapPassword",
         "Codex.Shared/AI/GeminiApiKey",
         "Codex.Shared/AI/OpenAIApiKey"
     };
@@ -41,10 +41,10 @@ public static class SecretNames
     public static void Validate(string name)
     {
         if (!IsSupported(name))
-            throw new ArgumentException("Nazwa nie pasuje do obsługiwanego zakresu sekretów.", nameof(name));
+            throw new ArgumentException("The name does not match a supported secret scope.", nameof(name));
         if (name.Length > 256)
-            throw new ArgumentException("Nazwa jest zbyt długa (maksymalnie 256 znaków).", nameof(name));
+            throw new ArgumentException("The name is too long (maximum 256 characters).", nameof(name));
         if (name.Any(char.IsControl))
-            throw new ArgumentException("Nazwa nie może zawierać znaków sterujących.", nameof(name));
+            throw new ArgumentException("The name must not contain control characters.", nameof(name));
     }
 }

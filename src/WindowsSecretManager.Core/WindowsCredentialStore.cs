@@ -17,7 +17,7 @@ public sealed class WindowsCredentialStore : ISecretStore
         {
             var error = Marshal.GetLastWin32Error();
             if (error == ErrorNotFound) return Array.Empty<string>();
-            throw new Win32Exception(error, "Nie udało się odczytać listy poświadczeń Windows.");
+            throw new Win32Exception(error, "Could not read the list of Windows credentials.");
         }
         try
         {
@@ -42,7 +42,7 @@ public sealed class WindowsCredentialStore : ISecretStore
         if (CredRead(name, CredTypeGeneric, 0, out var ptr)) { CredFree(ptr); return true; }
         var error = Marshal.GetLastWin32Error();
         if (error == ErrorNotFound) return false;
-        throw new Win32Exception(error, "Nie udało się sprawdzić poświadczenia Windows.");
+        throw new Win32Exception(error, "Could not check the Windows credential.");
     }
 
     public void Save(string name, SecureString value)
@@ -56,14 +56,14 @@ public sealed class WindowsCredentialStore : ISecretStore
                 CredentialBlob = secret, Persist = CredPersistLocalMachine, UserName = Environment.UserName,
                 Comment = ManagedComment
             };
-            if (!CredWrite(ref credential, 0)) throw new Win32Exception(Marshal.GetLastWin32Error(), "Nie udało się zapisać poświadczenia Windows.");
+            if (!CredWrite(ref credential, 0)) throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not save the Windows credential.");
         }
         finally { Marshal.ZeroFreeCoTaskMemUnicode(secret); }
     }
 
     public SecureString Read(string name)
     {
-        if (!CredRead(name, CredTypeGeneric, 0, out var ptr)) throw new Win32Exception(Marshal.GetLastWin32Error(), "Nie udało się odczytać poświadczenia Windows.");
+        if (!CredRead(name, CredTypeGeneric, 0, out var ptr)) throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not read the Windows credential.");
         try
         {
             var credential = Marshal.PtrToStructure<CREDENTIAL>(ptr);
@@ -81,7 +81,7 @@ public sealed class WindowsCredentialStore : ISecretStore
         if (CredDelete(name, CredTypeGeneric, 0)) return true;
         var error = Marshal.GetLastWin32Error();
         if (error == ErrorNotFound) return false;
-        throw new Win32Exception(error, "Nie udało się usunąć poświadczenia Windows.");
+        throw new Win32Exception(error, "Could not delete the Windows credential.");
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

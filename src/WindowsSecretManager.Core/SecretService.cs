@@ -23,7 +23,7 @@ public sealed class SecretService
         var normalized = SecretNames.Normalize(name);
         SecretNames.Validate(normalized);
         ValidateValue(value);
-        if (!overwrite && _store.Exists(normalized)) throw new InvalidOperationException("Wpis o tej nazwie już istnieje.");
+        if (!overwrite && _store.Exists(normalized)) throw new InvalidOperationException("An entry with this name already exists.");
         _store.Save(normalized, value);
         return normalized;
     }
@@ -37,13 +37,13 @@ public sealed class SecretService
         newName = newName.Trim();
         SecretNames.Validate(newName);
         if (string.Equals(oldName, newName, StringComparison.Ordinal)) return oldName;
-        if (_store.Exists(newName)) throw new InvalidOperationException("Wpis o nowej nazwie już istnieje.");
+        if (_store.Exists(newName)) throw new InvalidOperationException("An entry with the new name already exists.");
 
         using var value = _store.Read(oldName);
         _store.Save(newName, value);
         try
         {
-            if (!_store.Delete(oldName)) throw new InvalidOperationException("Nie znaleziono wpisu o starej nazwie.");
+            if (!_store.Delete(oldName)) throw new InvalidOperationException("Could not find the entry under the old name.");
         }
         catch
         {
@@ -72,7 +72,7 @@ public sealed class SecretService
             _store.Save(temporaryName, originalValue);
             try
             {
-                if (!_store.Delete(oldName)) throw new InvalidOperationException("Nie znaleziono wpisu o starej nazwie.");
+                if (!_store.Delete(oldName)) throw new InvalidOperationException("Could not find the entry under the old name.");
                 _store.Save(newName, value);
                 _store.Delete(temporaryName);
                 return newName;
@@ -84,12 +84,12 @@ public sealed class SecretService
                 throw;
             }
         }
-        if (_store.Exists(newName)) throw new InvalidOperationException("Wpis o nowej nazwie już istnieje.");
+        if (_store.Exists(newName)) throw new InvalidOperationException("An entry with the new name already exists.");
 
         _store.Save(newName, value);
         try
         {
-            if (!_store.Delete(oldName)) throw new InvalidOperationException("Nie znaleziono wpisu o starej nazwie.");
+            if (!_store.Delete(oldName)) throw new InvalidOperationException("Could not find the entry under the old name.");
         }
         catch
         {
@@ -102,8 +102,8 @@ public sealed class SecretService
     private static void ValidateValue(SecureString value)
     {
         ArgumentNullException.ThrowIfNull(value);
-        if (value.Length == 0) throw new ArgumentException("Sekret nie może być pusty.", nameof(value));
+        if (value.Length == 0) throw new ArgumentException("The secret cannot be empty.", nameof(value));
         if (value.Length > MaximumSecretLength)
-            throw new ArgumentException($"Sekret jest zbyt długi (maksymalnie {MaximumSecretLength} znaków).", nameof(value));
+            throw new ArgumentException($"The secret is too long (maximum {MaximumSecretLength} characters).", nameof(value));
     }
 }
