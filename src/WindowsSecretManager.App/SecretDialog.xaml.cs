@@ -10,18 +10,18 @@ public partial class SecretDialog : Window
     public string SecretName => NameBox.Text.Trim();
     public SecureString SecretValue => ValueBox.SecurePassword.Copy();
 
-    public SecretDialog(string? existingName = null, UiLanguage language = UiLanguage.German)
+    public SecretDialog(string? existingName = null, UiLanguage language = UiLanguage.German, string? existingValue = null)
     {
         _language = language;
         InitializeComponent();
         DarkTitleBar.Enable(this);
         ApplyLanguage(existingName is not null);
         NameBox.Text = existingName ?? string.Empty;
-        Loaded += (_, _) =>
-        {
-            if (existingName is null) NameBox.Focus();
-            else ValueBox.Focus();
-        };
+        // Pre-fill with the current value so editing only the name doesn't force
+        // re-entering the secret; left untouched, Save just writes it back unchanged.
+        if (existingValue is not null) ValueBox.Password = existingValue;
+        ValueBox.GotFocus += (_, _) => ValueBox.SelectAll();
+        Loaded += (_, _) => { NameBox.Focus(); NameBox.SelectAll(); };
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)

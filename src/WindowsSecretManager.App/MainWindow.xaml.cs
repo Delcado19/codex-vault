@@ -139,22 +139,25 @@ public partial class MainWindow : Window
                 using var codes = codesDialog.SecretValue;
                 var updatedName = _service.Update(name, codesDialog.SecretName, codes);
                 RefreshList(updatedName);
-                StatusText.Text = T.Get(_language, "Codesatz aktualisiert.", "Recovery code set rotated.");
+                StatusText.Text = T.Get(_language, "Codesatz aktualisiert.", "Recovery code set updated.");
             }
             catch (Exception ex) { ShowError(ex); }
             finally { currentValue = string.Empty; }
             return;
         }
-        var dialog = new SecretDialog(name, _language) { Owner = this };
-        if (dialog.ShowDialog() != true) return;
-        using var secret = dialog.SecretValue;
+        using var currentSecretValue = ReadOrReport(name); if (currentSecretValue is null) return;
+        var currentValueText = SecureStringText.Read(currentSecretValue);
         try
         {
+            var dialog = new SecretDialog(name, _language, currentValueText) { Owner = this };
+            if (dialog.ShowDialog() != true) return;
+            using var secret = dialog.SecretValue;
             var updatedName = _service.Update(name, dialog.SecretName, secret);
             RefreshList(updatedName);
-            StatusText.Text = T.Get(_language, "Secret aktualisiert.", "Secret rotated.");
+            StatusText.Text = T.Get(_language, "Secret aktualisiert.", "Secret updated.");
         }
         catch (Exception ex) { ShowError(ex); }
+        finally { currentValueText = string.Empty; }
     }
 
     private async void Reveal_Click(object sender, RoutedEventArgs e)
@@ -273,13 +276,13 @@ public partial class MainWindow : Window
         NamesOnlyText.Text = _showingRecoveryCodes ? T.Get(_language, "Codes bleiben verborgen, bis sie angezeigt werden", "Codes stay hidden until revealed") : T.Get(_language, "Es sind nur Namen sichtbar", "Only names are visible");
         AddButton.Content = _showingRecoveryCodes ? T.Get(_language, "＋  Wiederherstellungscodes hinzufügen", "＋  Add recovery codes") : T.Get(_language, "＋  Secret hinzufügen", "＋  Add secret");
         RecoveryCodesButton.Content = _showingRecoveryCodes ? T.Get(_language, "Secrets", "Secrets") : T.Get(_language, "Wiederherstellungscodes", "Recovery codes");
-        RotateButton.Content = T.Get(_language, "↻  Ändern", "↻  Rotate");
+        RotateButton.Content = T.Get(_language, "↻  Ändern", "↻  Edit");
         RevealButton.Content = _showingRecoveryCodes ? T.Get(_language, "◉  Codes anzeigen", "◉  Reveal codes") : T.Get(_language, "◉  Anzeigen", "◉  Reveal");
         CopyButton.Content = T.Get(_language, "▣  Kopieren", "▣  Copy");
         CopyButton.Visibility = _showingRecoveryCodes ? Visibility.Collapsed : Visibility.Visible;
         DeleteButton.Content = T.Get(_language, "Löschen", "Delete");
         RefreshButton.Content = T.Get(_language, "Aktualisieren", "Refresh");
-        ArchiveButton.Content = T.Get(_language, "Import / Export", "Import / export");
+        ArchiveButton.Content = T.Get(_language, "Import / Export", "Import / Export");
         FilterLabel.Text = T.Get(_language, "Suchen", "Search");
         AboutText.Text = T.Get(_language, "Über", "About");
         ApplyStandardStatus();

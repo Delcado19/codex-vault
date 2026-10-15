@@ -240,8 +240,8 @@ public partial class ArchiveWindow : Window
 
     private void ApplyLanguage()
     {
-        Title = T.Get(_language, "Import und Export — Codex Vault", "Import and export — Codex Vault");
-        HeadingText.Text = T.Get(_language, "Import und Export", "Import and export");
+        Title = T.Get(_language, "Import und Export — Codex Vault", "Import and Export — Codex Vault");
+        HeadingText.Text = T.Get(_language, "Import und Export", "Import and Export");
         DescriptionText.Text = T.Get(_language, "Alle Codex-Vault-Einträge verschieben oder sichern.", "Move or back up every Codex Vault entry.");
         ExportHeading.Text = T.Get(_language, "Export", "Export");
         ExportDescription.Text = T.Get(_language, "Alle Secrets und Wiederherstellungscodes in einer Datei speichern.", "Save all secrets and recovery codes in one file.");
