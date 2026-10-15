@@ -42,26 +42,18 @@ Both packages are self-contained and do not require a preinstalled .NET runtime.
 
 1. Start `CodexVault.exe`. Windows Hello appears only when you first perform a protected operation, such as reveal, copy, rotate, import, or export.
 2. Select **Add secret**.
-3. Choose a scope, enter a name, and paste the value.
+3. Enter a name and paste the value. The name is free-form — use whatever helps you recognize it later, for example `AI/OpenAIApiKey` or just `OpenAIApiKey`.
 4. In the consuming application, read the credential using exactly the same name.
 
 For recovery codes, open the dedicated **Recovery codes** view, choose a descriptive set name, enter the codes manually or import the provider's text file, and save. Sets are hidden from the CLI. The viewer supports selecting and copying one code at a time. Importing does not delete or encrypt the source file, so secure or remove it after verifying the saved entry.
 
 ## Backup and migration
 
-Open **Import / export** in the application header. Export writes every regular secret and recovery-code set to one `.cvault` file. Password-protected archives use AES-256-GCM encryption with a key derived through PBKDF2-SHA256. An archive created without a password is portable but **not encrypted**, and the application displays an explicit warning before writing it.
+Open **Import / export** in the application header. Export writes every regular secret and recovery-code set to one `.cvault` file. Password-protected archives use AES-256-GCM encryption with a key derived through PBKDF2-SHA256. An archive created without a password is still encrypted (via Windows DPAPI), but bound to the exporting Windows account and device — it cannot be opened elsewhere. Use a password if you need to move the archive to another account or machine.
 
 During import, choose how existing names should be handled: ask for each conflict, replace every existing entry, or skip every existing entry. Codex Vault resolves all per-entry questions before it begins writing. The source archive is never deleted automatically. Keep the archive secure, and do not lose its password—Codex Vault cannot recover it.
 
-Example names:
-
-| Purpose | Pattern |
-|---|---|
-| Projects intended to remain within Codex workflows | `Codex.Shared/AI/OpenAIApiKey` |
-| A secret intentionally shared across applications | `SharedSecrets/Mail/Password` |
-| A secret owned by one application | `Vendor.Application/DatabasePassword` |
-
-Prefixes organize entries, but they are not separate permission boundaries. Access is ultimately tied to the current Windows user account.
+Names are free-form; use whatever convention helps you stay organized, for example a namespace prefix like `AI/OpenAIApiKey`. A prefix is purely organizational, not a permission boundary — access is ultimately tied to the current Windows user account.
 
 ## CLI — for humans, scripts, and LLMs
 
@@ -71,14 +63,14 @@ Prefixes organize entries, but they are not separate permission boundaries. Acce
 # Names only — no values are revealed
 .\CodexVault.Cli.exe list
 .\CodexVault.Cli.exe list --filter OpenAI
-.\CodexVault.Cli.exe exists Codex.Shared/AI/OpenAIApiKey
+.\CodexVault.Cli.exe exists AI/OpenAIApiKey
 
 # The value is entered at a hidden prompt
-.\CodexVault.Cli.exe add Codex.Shared/AI/OpenAIApiKey
-.\CodexVault.Cli.exe update Codex.Shared/AI/OpenAIApiKey
+.\CodexVault.Cli.exe add AI/OpenAIApiKey
+.\CodexVault.Cli.exe update AI/OpenAIApiKey
 
 # Other operations
-.\CodexVault.Cli.exe get Codex.Shared/AI/OpenAIApiKey
+.\CodexVault.Cli.exe get AI/OpenAIApiKey
 .\CodexVault.Cli.exe rename OLD_NAME NEW_NAME
 .\CodexVault.Cli.exe delete NAME
 .\CodexVault.Cli.exe help
@@ -96,7 +88,7 @@ Contract for automation and local LLM agents:
 # This demonstrates stdin only. In production, the value should come directly
 # from process memory rather than a temporary file.
 Get-Content .\temporary-value.txt |
-  .\CodexVault.Cli.exe add SharedSecrets/Example/Key --stdin
+  .\CodexVault.Cli.exe add Example/Key --stdin
 ```
 
 The CLI does not invoke Windows Hello because it is designed for unattended operation. It runs with the permissions of the current Windows user. See **[docs/CLI.md](docs/CLI.md)** for the complete reference.

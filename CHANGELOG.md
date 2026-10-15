@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Removed the forced scope picker (Codex projects / Shared / Application) from the "Add secret" dialog. Names are now free-form in both the GUI and the CLI; the CLI no longer prepends `Codex.Shared/` to a bare name. Existing secrets created under the old prefixes are unaffected and keep working.
+- Fixed long secret names getting clipped instead of wrapping in the reveal dialog's title.
+
 ## 1.5.0 — 2026-10-15
 
 - Raised the minimum runtime from .NET 6 (out of support since 2024-11-12) to .NET 10 LTS.

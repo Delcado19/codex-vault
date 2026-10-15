@@ -4,12 +4,12 @@ using WindowsSecretManager.Core;
 
 var tests = new (string Name, Action Run)[]
 {
-    ("Normalize adds namespace", () => Equal("Codex.Shared/AI/Test", SecretNames.Normalize("AI/Test"))),
-    ("Normalize keeps namespace", () => Equal("Codex.Shared/AI/Test", SecretNames.Normalize("Codex.Shared/AI/Test"))),
-    ("Invalid empty suffix rejected", () => Throws<ArgumentException>(() => SecretNames.Validate("Codex.Shared/"))),
-    ("Shared scope accepted", () => SecretNames.Validate("SharedSecrets/AI/Key")),
-    ("Application scope accepted", () => SecretNames.Validate("Acme.Mail/ImapPassword")),
-    ("Recovery-code scope accepted", () => SecretNames.Validate("RecoveryCodes/GitHub")),
+    ("Normalize trims whitespace", () => Equal("AI/Test", SecretNames.Normalize("  AI/Test  "))),
+    ("Empty name rejected", () => Throws<ArgumentException>(() => SecretNames.Validate(""))),
+    ("Overlong name rejected", () => Throws<ArgumentException>(() => SecretNames.Validate(new string('a', 257)))),
+    ("Control character rejected", () => Throws<ArgumentException>(() => SecretNames.Validate("AI/Te\u0007st"))),
+    ("Arbitrary free-form name accepted", () => SecretNames.Validate("Acme.Mail/ImapPassword")),
+    ("Recovery-code name accepted", () => SecretNames.Validate("RecoveryCodes/GitHub")),
     ("List filters and sorts", TestList),
     ("Save refuses duplicate", TestDuplicate),
     ("Rotate replaces secret", TestRotate),
@@ -42,18 +42,18 @@ void TestList()
 {
     var store = new MemoryStore();
     using var value = Secure("x");
-    store.Save("Other/App", value); store.Save("Codex.Shared/Z", value); store.Save("Codex.Shared/a", value);
-    Sequence(new[] { "Codex.Shared/a", "Codex.Shared/Z" }, new SecretService(store).List());
+    store.Save("Zebra", value); store.Save("apple", value);
+    Sequence(new[] { "apple", "Zebra" }, new SecretService(store).List());
 }
 void TestDuplicate() { var store = new MemoryStore(); var service = new SecretService(store); using var v = Secure("one"); service.Save("AI/Key", v, false); Throws<InvalidOperationException>(() => service.Save("AI/Key", v, false)); }
-void TestRotate() { var store = new MemoryStore(); var service = new SecretService(store); using var a = Secure("a"); using var b = Secure("b"); service.Save("AI/Key", a, false); service.Save("AI/Key", b, true); using var read = service.Read("Codex.Shared/AI/Key"); Equal("b", Plain(read)); }
-void TestExists() { var store = new MemoryStore(); var service = new SecretService(store); using var value = Secure("x"); service.Save("Test", value, false); if (!service.Exists("Codex.Shared/Test")) throw new Exception("Existing secret was not found"); Equal(0, store.ListCalls); }
+void TestRotate() { var store = new MemoryStore(); var service = new SecretService(store); using var a = Secure("a"); using var b = Secure("b"); service.Save("AI/Key", a, false); service.Save("AI/Key", b, true); using var read = service.Read("AI/Key"); Equal("b", Plain(read)); }
+void TestExists() { var store = new MemoryStore(); var service = new SecretService(store); using var value = Secure("x"); service.Save("Test", value, false); if (!service.Exists("Test")) throw new Exception("Existing secret was not found"); Equal(0, store.ListCalls); }
 void TestDelete() { var store = new MemoryStore(); var service = new SecretService(store); using var v = Secure("x"); var n = service.Save("Test", v, false); if (!service.Delete(n) || store.Exists(n)) throw new Exception("Delete failed"); }
 void TestEmpty() { using var empty = new SecureString(); Throws<ArgumentException>(() => new SecretService(new MemoryStore()).Save("Test", empty, false)); }
-void TestRename() { var store = new MemoryStore(); var service = new SecretService(store); using var v = Secure("x"); service.Save("Old", v, false); var renamed = service.Rename("Codex.Shared/Old", "SharedSecrets/New"); Equal("SharedSecrets/New", renamed); if (store.Exists("Codex.Shared/Old") || !store.Exists(renamed)) throw new Exception("Rename did not move the entry"); }
-void TestRenameDuplicate() { var store = new MemoryStore(); var service = new SecretService(store); using var v = Secure("x"); service.Save("One", v, false); service.Save("Two", v, false); Throws<InvalidOperationException>(() => service.Rename("Codex.Shared/One", "Codex.Shared/Two")); }
-void TestUpdate() { var store = new MemoryStore(); var service = new SecretService(store); using var a = Secure("a"); using var b = Secure("b"); service.Save("Old", a, false); var updated = service.Update("Codex.Shared/Old", "SharedSecrets/New", b); Equal("SharedSecrets/New", updated); if (store.Exists("Codex.Shared/Old")) throw new Exception("Old entry remains"); using var read = service.Read(updated); Equal("b", Plain(read)); }
-void TestCaseOnlyUpdate() { var store = new MemoryStore(StringComparer.OrdinalIgnoreCase); var service = new SecretService(store); using var a = Secure("a"); using var b = Secure("b"); service.Save("Firefox", a, false); var updated = service.Update("Codex.Shared/Firefox", "Codex.Shared/firefox", b); Equal("Codex.Shared/firefox", updated); using var read = service.Read(updated); Equal("b", Plain(read)); }
+void TestRename() { var store = new MemoryStore(); var service = new SecretService(store); using var v = Secure("x"); service.Save("Old", v, false); var renamed = service.Rename("Old", "New"); Equal("New", renamed); if (store.Exists("Old") || !store.Exists(renamed)) throw new Exception("Rename did not move the entry"); }
+void TestRenameDuplicate() { var store = new MemoryStore(); var service = new SecretService(store); using var v = Secure("x"); service.Save("One", v, false); service.Save("Two", v, false); Throws<InvalidOperationException>(() => service.Rename("One", "Two")); }
+void TestUpdate() { var store = new MemoryStore(); var service = new SecretService(store); using var a = Secure("a"); using var b = Secure("b"); service.Save("Old", a, false); var updated = service.Update("Old", "New", b); Equal("New", updated); if (store.Exists("Old")) throw new Exception("Old entry remains"); using var read = service.Read(updated); Equal("b", Plain(read)); }
+void TestCaseOnlyUpdate() { var store = new MemoryStore(StringComparer.OrdinalIgnoreCase); var service = new SecretService(store); using var a = Secure("a"); using var b = Secure("b"); service.Save("Firefox", a, false); var updated = service.Update("Firefox", "firefox", b); Equal("firefox", updated); using var read = service.Read(updated); Equal("b", Plain(read)); }
 void TestCaseOnlyUpdateRollback()
 {
     var store = new MemoryStore(StringComparer.OrdinalIgnoreCase);
@@ -61,9 +61,9 @@ void TestCaseOnlyUpdateRollback()
     using var original = Secure("original");
     using var replacement = Secure("replacement");
     service.Save("Firefox", original, false);
-    store.FailNextSaveFor = "Codex.Shared/firefox";
-    Throws<IOException>(() => service.Update("Codex.Shared/Firefox", "Codex.Shared/firefox", replacement));
-    using var restored = service.Read("Codex.Shared/Firefox");
+    store.FailNextSaveFor = "firefox";
+    Throws<IOException>(() => service.Update("Firefox", "firefox", replacement));
+    using var restored = service.Read("Firefox");
     Equal("original", Plain(restored));
 }
 void TestProtectedArchive()

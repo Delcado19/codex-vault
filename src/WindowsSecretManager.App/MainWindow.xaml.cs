@@ -282,7 +282,6 @@ public partial class MainWindow : Window
         ArchiveButton.Content = T.Get(_language, "Import / Export", "Import / export");
         FilterLabel.Text = T.Get(_language, "Suchen", "Search");
         AboutText.Text = T.Get(_language, "Über", "About");
-        ScopesText.Visibility = _showingRecoveryCodes ? Visibility.Collapsed : Visibility.Visible;
         ApplyStandardStatus();
         GermanButton.Background = _language == UiLanguage.German ? (System.Windows.Media.Brush)FindResource("Accent") : (System.Windows.Media.Brush)FindResource("Surface");
         EnglishButton.Background = _language == UiLanguage.English ? (System.Windows.Media.Brush)FindResource("Accent") : (System.Windows.Media.Brush)FindResource("Surface");

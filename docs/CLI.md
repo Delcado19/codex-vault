@@ -16,7 +16,7 @@
 | `delete NAME [--yes]` | Deletes a secret; `--yes` skips the prompt |
 | `version` | Displays the CLI version |
 
-Names beginning with `Codex.Shared/`, `SharedSecrets/`, or `Vendor.Application/` are preserved. When a prefix is omitted, the CLI prepends `Codex.Shared/`.
+Names are free-form and stored exactly as given (trimmed of surrounding whitespace); the CLI no longer prepends a prefix. Use "/" as an optional, purely organizational separator if it helps you keep names readable.
 
 ## Interactive use
 
@@ -25,9 +25,9 @@ Installed location:
 ```powershell
 cd "$env:LOCALAPPDATA\Programs\Codex Vault"
 .\CodexVault.Cli.exe list
-.\CodexVault.Cli.exe add SharedSecrets/Mail/Password
-.\CodexVault.Cli.exe update SharedSecrets/Mail/Password
-.\CodexVault.Cli.exe rename SharedSecrets/Mail/Password Acme.Mail/ImapPassword
+.\CodexVault.Cli.exe add Mail/Password
+.\CodexVault.Cli.exe update Mail/Password
+.\CodexVault.Cli.exe rename Mail/Password Acme.Mail/ImapPassword
 .\CodexVault.Cli.exe delete Acme.Mail/ImapPassword
 ```
 
@@ -39,7 +39,7 @@ A controlling process can send a single-line or multi-line value through standar
 
 ```powershell
 Get-Content .\temporary-value.txt |
-  .\CodexVault.Cli.exe add SharedSecrets/Example/Key --stdin
+  .\CodexVault.Cli.exe add Example/Key --stdin
 ```
 
 The file above demonstrates the mechanism only. For a real secret, pass the value directly from process memory and do not create a temporary file. The CLI intentionally provides no `--value` argument because command-line arguments can appear in shell history and process inspection tools.
@@ -68,4 +68,4 @@ Exit codes:
 
 ## Windows Hello and the security boundary
 
-The CLI neither opens the graphical application nor invokes Windows Hello. This enables unattended automation, but it also means that another process running as the same Windows user can attempt to call it. Windows Credential Manager enforces the actual credential access in the user's security context. Naming prefixes organize entries; they are not separate access-control boundaries.
+The CLI neither opens the graphical application nor invokes Windows Hello. This enables unattended automation, but it also means that another process running as the same Windows user can attempt to call it. Windows Credential Manager enforces the actual credential access in the user's security context. An optional "/" in a name organizes entries; it is not an access-control boundary.

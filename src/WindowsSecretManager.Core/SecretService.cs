@@ -5,11 +5,13 @@ namespace WindowsSecretManager.Core;
 public sealed class SecretService
 {
     public const int MaximumSecretLength = 2560;
+    // Scratch namespace for the temporary entry used while swapping a case-only
+    // rename; unrelated to any name the user can type, so it can't collide.
+    private const string TemporaryRenamePrefix = ".codex-vault-rename/";
     private readonly ISecretStore _store;
     public SecretService(ISecretStore store) => _store = store;
 
     public IReadOnlyList<string> List() => _store.ListNames()
-        .Where(SecretNames.IsSupported)
         .OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray();
 
     public bool Exists(string name)
@@ -68,7 +70,7 @@ public sealed class SecretService
         if (string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase))
         {
             using var originalValue = _store.Read(oldName);
-            var temporaryName = SecretNames.Prefix + ".case-change/" + Guid.NewGuid().ToString("N");
+            var temporaryName = TemporaryRenamePrefix + Guid.NewGuid().ToString("N");
             _store.Save(temporaryName, originalValue);
             try
             {

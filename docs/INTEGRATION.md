@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 using WindowsSecretManager.Core;
 
 using var secret = new WindowsCredentialStore()
-    .Read("Codex.Shared/AI/OpenAIApiKey");
+    .Read("AI/OpenAIApiKey");
 
 var pointer = Marshal.SecureStringToGlobalAllocUnicode(secret);
 try
@@ -56,23 +56,17 @@ some-tool.exe --api-key $secret
 
 If a third-party tool accepts a secret only through an environment variable, set it only for the current process, start the tool, and remove the variable in a `finally` block. This is still weaker than direct Credential Manager access by the consuming application.
 
-## Naming scopes
+## Naming
 
-Codex Vault supports three scopes:
-
-- `Codex.Shared/*` — tools and projects used with Codex;
-- `SharedSecrets/*` — values intentionally shared by multiple independent applications;
-- `Vendor.Application/*` — values owned by one specific application.
-
-A prefix is an organizational convention, not an access-control boundary. A process running as the same Windows user and knowing the target name can attempt to read it. Prefer a dedicated `Vendor.Application/*` entry for an independent application and choose a shared scope only deliberately.
+Names are free-form: type whatever helps you and the consuming application agree on the same credential. A "/" is purely organizational — not an access-control boundary. A process running as the same Windows user and knowing the target name can attempt to read it regardless of how the name is structured.
 
 Renaming in Codex Vault creates the new entry and removes the old one while preserving the value. Every consumer of the former name must be updated; Windows Credential Manager does not provide aliases or redirects.
 
 | Purpose | Target name |
 |---|---|
-| Onet IMAP password | `Codex.Shared/Onet/ImapPassword` |
-| Gemini API key | `Codex.Shared/AI/GeminiApiKey` |
-| OpenAI API key | `Codex.Shared/AI/OpenAIApiKey` |
+| GMX IMAP password | `GMX/ImapPassword` |
+| Gemini API key | `AI/GeminiApiKey` |
+| OpenAI API key | `AI/OpenAIApiKey` |
 
 ## Missing-secret behavior
 
