@@ -12,13 +12,13 @@ public partial class ArchiveConflictDialog : Window
     {
         InitializeComponent();
         DarkTitleBar.Enable(this);
-        HeadingText.Text = T.Get(language, "Pozycja już istnieje", "Entry already exists");
+        HeadingText.Text = T.Get(language, "Eintrag existiert bereits", "Entry already exists");
         MessageText.Text = T.Get(language,
-            $"W Codex Vault istnieje już pozycja:\n{name}\n\nJak rozwiązać ten konflikt?",
+            $"Codex Vault enthält bereits:\n{name}\n\nWie soll dieser Konflikt gelöst werden?",
             $"Codex Vault already contains:\n{name}\n\nHow should this conflict be resolved?");
-        ReplaceButton.Content = T.Get(language, "Zastąp", "Replace");
-        SkipButton.Content = T.Get(language, "Pomiń", "Skip");
-        CancelButton.Content = T.Get(language, "Anuluj import", "Cancel import");
+        ReplaceButton.Content = T.Get(language, "Ersetzen", "Replace");
+        SkipButton.Content = T.Get(language, "Überspringen", "Skip");
+        CancelButton.Content = T.Get(language, "Import abbrechen", "Cancel import");
     }
 
     public ArchiveConflictChoice ShowChoice()
