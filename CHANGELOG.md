@@ -4,6 +4,7 @@
 
 - Migrated all projects from .NET 6 (out of support since 2024-11-12) to .NET 10 LTS.
 - Replaced the deprecated single-argument `AesGcm` constructor with the explicit-tag-size overload in `VaultArchive`.
+- Hardened the Windows Hello gate to fail closed: a missing or unavailable Hello factor now blocks the operation with an error message instead of offering a "continue without verification?" bypass.
 
 ## 1.4.1 — 2026-09-13
 
