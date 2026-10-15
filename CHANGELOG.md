@@ -5,6 +5,8 @@
 - Migrated all projects from .NET 6 (out of support since 2024-11-12) to .NET 10 LTS.
 - Replaced the deprecated single-argument `AesGcm` constructor with the explicit-tag-size overload in `VaultArchive`.
 - Hardened the Windows Hello gate to fail closed: a missing or unavailable Hello factor now blocks the operation with an error message instead of offering a "continue without verification?" bypass.
+- Password-less archive export no longer writes secrets as plaintext JSON: it is now encrypted with DPAPI, bound to the exporting Windows account and device. A password-protected export remains the only way to move secrets to another account or machine.
+- Archive export passwords must now be at least `VaultArchive.MinimumPasswordLength` (8) characters, enforced in `VaultArchive.Create` itself rather than only in the GUI.
 
 ## 1.4.1 — 2026-09-13
 

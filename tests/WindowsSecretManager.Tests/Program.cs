@@ -23,7 +23,10 @@ var tests = new (string Name, Action Run)[]
     ("Case-only update restores original after failure", TestCaseOnlyUpdateRollback),
     ("Password-protected archive round-trips", TestProtectedArchive),
     ("Unprotected archive round-trips", TestUnprotectedArchive),
-    ("Archive rejects a wrong password", TestWrongArchivePassword)
+    ("Archive rejects a wrong password", TestWrongArchivePassword),
+    ("Unprotected archive is device-protected, not plaintext", TestUnprotectedArchiveIsDeviceProtected),
+    ("Archive rejects a too-short password", () => Throws<ArgumentException>(() =>
+        VaultArchive.Create(new[] { new VaultArchiveItem("Codex.Shared/Test", "value") }, "short")))
 };
 
 var failed = 0;
@@ -95,6 +98,18 @@ void TestWrongArchivePassword()
 {
     var bytes = VaultArchive.Create(new[] { new VaultArchiveItem("Codex.Shared/Test", "value") }, "right-password");
     try { Throws<UnauthorizedAccessException>(() => VaultArchive.Open(bytes, "wrong-password")); }
+    finally { System.Security.Cryptography.CryptographicOperations.ZeroMemory(bytes); }
+}
+void TestUnprotectedArchiveIsDeviceProtected()
+{
+    var bytes = VaultArchive.Create(new[] { new VaultArchiveItem("Codex.Shared/Test", "value") }, null);
+    try
+    {
+        var info = VaultArchive.Inspect(bytes);
+        if (!info.DeviceProtected) throw new Exception("No-password archive should be DPAPI device-protected, not plaintext");
+        var text = System.Text.Encoding.UTF8.GetString(bytes);
+        if (text.Contains("value", StringComparison.Ordinal)) throw new Exception("Secret value leaked into the archive as plaintext");
+    }
     finally { System.Security.Cryptography.CryptographicOperations.ZeroMemory(bytes); }
 }
 static SecureString Secure(string value) { var s = new SecureString(); foreach (var c in value) s.AppendChar(c); s.MakeReadOnly(); return s; }

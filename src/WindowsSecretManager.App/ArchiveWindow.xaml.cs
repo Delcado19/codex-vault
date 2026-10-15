@@ -34,10 +34,11 @@ public partial class ArchiveWindow : Window
         var confirmation = ConfirmPasswordBox.Password;
         if (protectedArchive)
         {
-            if (password.Length < 8)
+            if (password.Length < VaultArchive.MinimumPasswordLength)
             {
                 ShowMessage("Hasło jest zbyt krótkie", "Password is too short",
-                    "Użyj hasła mającego co najmniej 8 znaków.", "Use a password with at least 8 characters.");
+                    $"Użyj hasła mającego co najmniej {VaultArchive.MinimumPasswordLength} znaków.",
+                    $"Use a password with at least {VaultArchive.MinimumPasswordLength} characters.");
                 return;
             }
             if (!string.Equals(password, confirmation, StringComparison.Ordinal))
@@ -50,8 +51,8 @@ public partial class ArchiveWindow : Window
         else if (!StyledDialog.Confirm(this,
                      T.Get(_language, "Archiwum bez hasła", "Archive without a password"),
                      T.Get(_language,
-                         "Plik będzie zawierał wszystkie sekrety w postaci niezaszyfrowanej. Każdy, kto uzyska dostęp do pliku, będzie mógł je odczytać. Czy kontynuować?",
-                         "The file will contain every secret without encryption. Anyone who obtains the file can read them. Continue?"),
+                         "Plik zostanie zaszyfrowany i powiązany z tym kontem Windows na tym urządzeniu (DPAPI) — nie będzie można go otworzyć na innym koncie, komputerze ani po reinstalacji Windows. Do przenoszenia sekretów na inny system użyj archiwum z hasłem. Czy kontynuować?",
+                         "The file will be encrypted and bound to this Windows account on this device (DPAPI) — it cannot be opened on another account, another PC, or after a Windows reinstall. To move secrets to another system, use a password-protected archive instead. Continue?"),
                      _language)) return;
 
         var picker = new SaveFileDialog
@@ -119,9 +120,13 @@ public partial class ArchiveWindow : Window
             var countText = archiveInfo.ItemCount is { } count
                 ? T.Get(_language, $"Pozycje do importowania: {count}.", $"Entries to import: {count}.")
                 : T.Get(_language, "Po podaniu hasła program pokaże liczbę pozycji przed importem.", "After you enter the password, the entry count will be shown before import.");
-            ArchiveInfoText.Text = _selectedArchiveProtected
-                ? $"{T.Get(_language, "Archiwum jest zabezpieczone hasłem.", "This archive is password-protected.")}\n{countText}"
-                : $"{T.Get(_language, "Archiwum nie jest zaszyfrowane.", "This archive is not encrypted.")}\n{countText}";
+            var statusText = _selectedArchiveProtected
+                ? T.Get(_language, "Archiwum jest zabezpieczone hasłem.", "This archive is password-protected.")
+                : archiveInfo.DeviceProtected
+                    ? T.Get(_language, "Archiwum jest powiązane z kontem Windows (DPAPI) — hasło nie jest wymagane, ale musi być otwierane na tym samym koncie.",
+                        "This archive is bound to a Windows account (DPAPI) — no password needed, but it must be opened on that same account.")
+                    : T.Get(_language, "Archiwum nie jest zaszyfrowane (starszy format).", "This archive is not encrypted (legacy format).");
+            ArchiveInfoText.Text = $"{statusText}\n{countText}";
         }
         catch (Exception ex)
         {
@@ -185,8 +190,8 @@ public partial class ArchiveWindow : Window
         catch (UnauthorizedAccessException)
         {
             ShowMessage("Nie można otworzyć archiwum", "Could not open archive",
-                "Hasło jest nieprawidłowe albo archiwum zostało uszkodzone.",
-                "The password is incorrect or the archive is damaged.", true);
+                "Hasło jest nieprawidłowe, archiwum zostało utworzone na innym koncie Windows lub urządzeniu, albo plik jest uszkodzony.",
+                "The password is incorrect, the archive was created on a different Windows account or device, or the file is damaged.", true);
         }
         catch (Exception ex)
         {
@@ -243,7 +248,9 @@ public partial class ArchiveWindow : Window
         ProtectExportCheck.Content = T.Get(_language, "Zabezpiecz archiwum hasłem", "Protect archive with a password");
         ExportPasswordLabel.Text = T.Get(_language, "Hasło", "Password");
         ConfirmPasswordLabel.Text = T.Get(_language, "Powtórz hasło", "Confirm password");
-        ExportWarningText.Text = T.Get(_language, "Bez hasła zawartość pliku nie będzie zaszyfrowana.", "Without a password, the file contents will not be encrypted.");
+        ExportWarningText.Text = T.Get(_language,
+            "Bez hasła plik jest szyfrowany i powiązany tylko z tym kontem Windows na tym urządzeniu.",
+            "Without a password, the file is encrypted but bound to this Windows account on this device only.");
         ExportButton.Content = T.Get(_language, "Eksportuj wszystkie pozycje…", "Export all entries…");
         ImportHeading.Text = T.Get(_language, "Import", "Import");
         ImportDescription.Text = T.Get(_language, "Przywróć pozycje z archiwum .cvault.", "Restore entries from a .cvault archive.");

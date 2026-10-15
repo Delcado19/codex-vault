@@ -11,7 +11,7 @@ public sealed record VaultArchiveContents(
     DateTimeOffset CreatedAt,
     bool PasswordProtected);
 
-public sealed record VaultArchiveInfo(bool PasswordProtected, int? ItemCount);
+public sealed record VaultArchiveInfo(bool PasswordProtected, int? ItemCount, bool DeviceProtected = false);
 
 public static class VaultArchive
 {
@@ -22,6 +22,7 @@ public static class VaultArchive
     private const int TagSize = 16;
     private const int KeySize = 32;
     public const int MaximumSizeBytes = 16 * 1024 * 1024;
+    public const int MinimumPasswordLength = 8;
     private static readonly byte[] AssociatedData = Encoding.UTF8.GetBytes("CodexVault/v1");
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -37,10 +38,16 @@ public static class VaultArchive
         {
             if (string.IsNullOrEmpty(password))
             {
+                // No password: still encrypt, bound to this Windows account via DPAPI, instead of
+                // writing the secrets as plaintext JSON. Trade-off: the file becomes unreadable on
+                // any other account or machine, so a password is still required for a portable backup.
+                var protectedBytes = ProtectedData.Protect(payloadBytes, null, DataProtectionScope.CurrentUser);
                 return JsonSerializer.SerializeToUtf8Bytes(
-                    new ArchiveEnvelope(FormatVersion, "none", materialized.Length, null, null, null, null,
-                        Convert.ToBase64String(payloadBytes)), JsonOptions);
+                    new ArchiveEnvelope(FormatVersion, "dpapi", materialized.Length, null, null, null, null,
+                        Convert.ToBase64String(protectedBytes)), JsonOptions);
             }
+            if (password.Length < MinimumPasswordLength)
+                throw new ArgumentException($"The password must be at least {MinimumPasswordLength} characters long.", nameof(password));
 
             var salt = RandomNumberGenerator.GetBytes(SaltSize);
             var nonce = RandomNumberGenerator.GetBytes(NonceSize);
@@ -93,6 +100,21 @@ public static class VaultArchive
         if (string.Equals(envelope.Encryption, "none", StringComparison.Ordinal))
         {
             payloadBytes = Decode(envelope.Payload, "payload");
+        }
+        else if (string.Equals(envelope.Encryption, "dpapi", StringComparison.Ordinal))
+        {
+            var protectedBytes = Decode(envelope.Payload, "payload");
+            try
+            {
+                payloadBytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+            }
+            catch (CryptographicException ex)
+            {
+                // DPAPI keys are bound to the Windows account that created them; this is the
+                // DPAPI-equivalent of "wrong password" and reported the same way to the caller.
+                throw new UnauthorizedAccessException(
+                    "The password is incorrect, this archive was protected on a different Windows account or device, or it is damaged.", ex);
+            }
         }
         else if (passwordProtected)
         {
@@ -168,6 +190,8 @@ public static class VaultArchive
                 throw new InvalidDataException("The archive entry count is invalid.");
             if (string.Equals(envelope.Encryption, "aes-256-gcm", StringComparison.Ordinal))
                 return new VaultArchiveInfo(true, envelope.ItemCount);
+            if (string.Equals(envelope.Encryption, "dpapi", StringComparison.Ordinal))
+                return new VaultArchiveInfo(false, envelope.ItemCount, DeviceProtected: true);
             if (string.Equals(envelope.Encryption, "none", StringComparison.Ordinal))
                 return new VaultArchiveInfo(false, envelope.ItemCount);
             throw new InvalidDataException("The archive uses an unsupported encryption method.");
