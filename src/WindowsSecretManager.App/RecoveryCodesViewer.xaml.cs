@@ -81,7 +81,7 @@ public partial class RecoveryCodesViewer : Window
         _copiedClipboardSequence = GetClipboardSequenceNumber();
         _clipboardTimer.Stop();
         _clipboardTimer.Start();
-        StatusText.Text = T.Get(_language, "Kod skopiowano. Schowek zostanie wyczyszczony za 30 sekund.", "Code copied. The clipboard will be cleared in 30 seconds.");
+        StatusText.Text = T.Get(_language, "Code kopiert. Die Zwischenablage wird in 30 Sekunden geleert.", "Code copied. The clipboard will be cleared in 30 seconds.");
     }
 
     private void ClearClipboard()
@@ -92,22 +92,22 @@ public partial class RecoveryCodesViewer : Window
         {
             Clipboard.Clear();
             _copiedClipboardSequence = 0;
-            StatusText.Text = T.Get(_language, "Schowek wyczyszczono.", "Clipboard cleared.");
+            StatusText.Text = T.Get(_language, "Zwischenablage geleert.", "Clipboard cleared.");
         }
         catch
         {
-            StatusText.Text = T.Get(_language, "Nie udało się wyczyścić schowka; skopiuj inną wartość.", "Could not clear the clipboard; copy another value.");
+            StatusText.Text = T.Get(_language, "Zwischenablage konnte nicht geleert werden; kopiere einen anderen Wert.", "Could not clear the clipboard; copy another value.");
         }
     }
 
     private void ApplyLanguage()
     {
-        Title = T.Get(_language, "Kody odzyskiwania — Codex Vault", "Recovery codes — Codex Vault");
-        HeadingText.Text = T.Get(_language, "Zestaw kodów odzyskiwania", "Recovery code set");
-        InstructionText.Text = T.Get(_language, "Zaznacz jeden kod, aby skopiować tylko jego wartość.", "Select one code to copy only that value.");
-        StatusText.Text = T.Get(_language, $"Liczba kodów: {CodesList.Items.Count}", $"Codes: {CodesList.Items.Count}");
-        CloseButton.Content = T.Get(_language, "Zamknij", "Close");
-        CopySelectedButton.Content = T.Get(_language, "Kopiuj wybrany", "Copy selected");
+        Title = T.Get(_language, "Wiederherstellungscodes — Codex Vault", "Recovery codes — Codex Vault");
+        HeadingText.Text = T.Get(_language, "Satz von Wiederherstellungscodes", "Recovery code set");
+        InstructionText.Text = T.Get(_language, "Wähle einen Code aus, um nur diesen Wert zu kopieren.", "Select one code to copy only that value.");
+        StatusText.Text = T.Get(_language, $"Anzahl Codes: {CodesList.Items.Count}", $"Codes: {CodesList.Items.Count}");
+        CloseButton.Content = T.Get(_language, "Schließen", "Close");
+        CopySelectedButton.Content = T.Get(_language, "Auswahl kopieren", "Copy selected");
     }
 
     [DllImport("user32.dll")]

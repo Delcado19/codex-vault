@@ -22,7 +22,7 @@ API keys often end up in `.env` files, scripts, terminal history, or source cont
 - Values are never saved in Codex Vault configuration or ordinary files.
 - The list displays names only, never secret values.
 - Windows Hello protects the first reveal, copy, rotate, import, or export operation in each application session.
-- The polished dark UI is available in English and Polish and includes search.
+- The polished dark UI is available in English and German and includes search.
 - Recovery-code sets can be entered manually or imported from a text file.
 - Complete backups can be exported to and restored from a portable `.cvault` archive, optionally protected with a password.
 - The GUI serves everyday use; the separate CLI supports scripts, applications, and local LLM agents.
@@ -115,7 +115,7 @@ Codex Vault does not protect against an administrator, debugger, or malicious pr
 
 ## Build from source
 
-Building requires the .NET 6 SDK on Windows:
+Building requires the .NET 10 SDK on Windows:
 
 ```powershell
 dotnet build .\WindowsSecretManager.sln -c Release

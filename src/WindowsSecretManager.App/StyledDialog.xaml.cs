@@ -17,8 +17,8 @@ public partial class StyledDialog : Window
         MessageText.Text = message;
         SymbolText.Text = error ? "!" : confirmation ? "?" : "i";
         SecondaryButton.Visibility = confirmation ? Visibility.Visible : Visibility.Collapsed;
-        SecondaryButton.Content = T.Get(language, "Nie", "No");
-        PrimaryButton.Content = confirmation ? T.Get(language, "Tak", "Yes") : "OK";
+        SecondaryButton.Content = T.Get(language, "Nein", "No");
+        PrimaryButton.Content = confirmation ? T.Get(language, "Ja", "Yes") : "OK";
     }
 
     public static void Show(Window? owner, string title, string message, UiLanguage language, bool error = false) =>

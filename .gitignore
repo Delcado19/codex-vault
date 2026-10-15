@@ -5,6 +5,7 @@ TestResults/
 publish/
 outputs/
 work/
+graphify-out/
 *.user
 *.suo
 

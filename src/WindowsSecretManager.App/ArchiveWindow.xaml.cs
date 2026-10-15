@@ -34,30 +34,31 @@ public partial class ArchiveWindow : Window
         var confirmation = ConfirmPasswordBox.Password;
         if (protectedArchive)
         {
-            if (password.Length < 8)
+            if (password.Length < VaultArchive.MinimumPasswordLength)
             {
-                ShowMessage("Hasło jest zbyt krótkie", "Password is too short",
-                    "Użyj hasła mającego co najmniej 8 znaków.", "Use a password with at least 8 characters.");
+                ShowMessage("Passwort ist zu kurz", "Password is too short",
+                    $"Verwende ein Passwort mit mindestens {VaultArchive.MinimumPasswordLength} Zeichen.",
+                    $"Use a password with at least {VaultArchive.MinimumPasswordLength} characters.");
                 return;
             }
             if (!string.Equals(password, confirmation, StringComparison.Ordinal))
             {
-                ShowMessage("Hasła są różne", "Passwords do not match",
-                    "Wpisz to samo hasło w obu polach.", "Enter the same password in both fields.");
+                ShowMessage("Passwörter stimmen nicht überein", "Passwords do not match",
+                    "Gib in beiden Feldern dasselbe Passwort ein.", "Enter the same password in both fields.");
                 return;
             }
         }
         else if (!StyledDialog.Confirm(this,
-                     T.Get(_language, "Archiwum bez hasła", "Archive without a password"),
+                     T.Get(_language, "Archiv ohne Passwort", "Archive without a password"),
                      T.Get(_language,
-                         "Plik będzie zawierał wszystkie sekrety w postaci niezaszyfrowanej. Każdy, kto uzyska dostęp do pliku, będzie mógł je odczytać. Czy kontynuować?",
-                         "The file will contain every secret without encryption. Anyone who obtains the file can read them. Continue?"),
+                         "Die Datei wird verschlüsselt und an dieses Windows-Konto auf diesem Gerät gebunden (DPAPI) — sie kann nicht auf einem anderen Konto, einem anderen PC oder nach einer Windows-Neuinstallation geöffnet werden. Um Secrets auf ein anderes System zu übertragen, verwende stattdessen ein passwortgeschütztes Archiv. Fortfahren?",
+                         "The file will be encrypted and bound to this Windows account on this device (DPAPI) — it cannot be opened on another account, another PC, or after a Windows reinstall. To move secrets to another system, use a password-protected archive instead. Continue?"),
                      _language)) return;
 
         var picker = new SaveFileDialog
         {
-            Title = T.Get(_language, "Zapisz archiwum Codex Vault", "Save Codex Vault archive"),
-            Filter = T.Get(_language, "Archiwum Codex Vault (*.cvault)|*.cvault", "Codex Vault archive (*.cvault)|*.cvault"),
+            Title = T.Get(_language, "Codex-Vault-Archiv speichern", "Save Codex Vault archive"),
+            Filter = T.Get(_language, "Codex-Vault-Archiv (*.cvault)|*.cvault", "Codex Vault archive (*.cvault)|*.cvault"),
             FileName = $"CodexVault-{DateTime.Now:yyyy-MM-dd}.cvault",
             AddExtension = true,
             DefaultExt = ".cvault"
@@ -77,16 +78,16 @@ public partial class ArchiveWindow : Window
             archiveBytes = VaultArchive.Create(items, protectedArchive ? password : null);
             File.WriteAllBytes(picker.FileName, archiveBytes);
             StatusText.Text = T.Get(_language,
-                $"Wyeksportowano {items.Count} pozycji.",
+                $"{items.Count} Einträge exportiert.",
                 $"Exported {items.Count} entries.");
-            StyledDialog.Show(this, T.Get(_language, "Eksport zakończony", "Export complete"),
+            StyledDialog.Show(this, T.Get(_language, "Export abgeschlossen", "Export complete"),
                 T.Get(_language,
-                    $"Zapisano {items.Count} pozycji w pliku:\n{picker.FileName}",
+                    $"{items.Count} Einträge gespeichert in:\n{picker.FileName}",
                     $"Saved {items.Count} entries to:\n{picker.FileName}"), _language);
         }
         catch (Exception ex)
         {
-            ShowOperationError(ex, "Nie udało się wyeksportować archiwum.", "Could not export the archive.");
+            ShowOperationError(ex, "Das Archiv konnte nicht exportiert werden.", "Could not export the archive.");
         }
         finally
         {
@@ -102,8 +103,8 @@ public partial class ArchiveWindow : Window
     {
         var picker = new OpenFileDialog
         {
-            Title = T.Get(_language, "Wybierz archiwum Codex Vault", "Select a Codex Vault archive"),
-            Filter = T.Get(_language, "Archiwum Codex Vault (*.cvault)|*.cvault|Wszystkie pliki (*.*)|*.*", "Codex Vault archive (*.cvault)|*.cvault|All files (*.*)|*.*")
+            Title = T.Get(_language, "Codex-Vault-Archiv wählen", "Select a Codex Vault archive"),
+            Filter = T.Get(_language, "Codex-Vault-Archiv (*.cvault)|*.cvault|Alle Dateien (*.*)|*.*", "Codex Vault archive (*.cvault)|*.cvault|All files (*.*)|*.*")
         };
         if (picker.ShowDialog(this) != true) return;
         try
@@ -117,17 +118,21 @@ public partial class ArchiveWindow : Window
             ImportPasswordBox.IsEnabled = _selectedArchiveProtected;
             if (!_selectedArchiveProtected) ImportPasswordBox.Clear();
             var countText = archiveInfo.ItemCount is { } count
-                ? T.Get(_language, $"Pozycje do importowania: {count}.", $"Entries to import: {count}.")
-                : T.Get(_language, "Po podaniu hasła program pokaże liczbę pozycji przed importem.", "After you enter the password, the entry count will be shown before import.");
-            ArchiveInfoText.Text = _selectedArchiveProtected
-                ? $"{T.Get(_language, "Archiwum jest zabezpieczone hasłem.", "This archive is password-protected.")}\n{countText}"
-                : $"{T.Get(_language, "Archiwum nie jest zaszyfrowane.", "This archive is not encrypted.")}\n{countText}";
+                ? T.Get(_language, $"Zu importierende Einträge: {count}.", $"Entries to import: {count}.")
+                : T.Get(_language, "Nach Eingabe des Passworts zeigt die App die Anzahl der Einträge vor dem Import an.", "After you enter the password, the entry count will be shown before import.");
+            var statusText = _selectedArchiveProtected
+                ? T.Get(_language, "Dieses Archiv ist passwortgeschützt.", "This archive is password-protected.")
+                : archiveInfo.DeviceProtected
+                    ? T.Get(_language, "Dieses Archiv ist an ein Windows-Konto gebunden (DPAPI) — es ist kein Passwort nötig, aber es muss auf demselben Konto geöffnet werden.",
+                        "This archive is bound to a Windows account (DPAPI) — no password needed, but it must be opened on that same account.")
+                    : T.Get(_language, "Dieses Archiv ist nicht verschlüsselt (altes Format).", "This archive is not encrypted (legacy format).");
+            ArchiveInfoText.Text = $"{statusText}\n{countText}";
         }
         catch (Exception ex)
         {
             ImportPathBox.Clear();
             ArchiveInfoText.Text = string.Empty;
-            ShowOperationError(ex, "Nie udało się odczytać archiwum.", "Could not read the archive.");
+            ShowOperationError(ex, "Das Archiv konnte nicht gelesen werden.", "Could not read the archive.");
         }
     }
 
@@ -136,8 +141,8 @@ public partial class ArchiveWindow : Window
         var path = ImportPathBox.Text;
         if (string.IsNullOrWhiteSpace(path))
         {
-            ShowMessage("Nie wybrano pliku", "No file selected",
-                "Najpierw wybierz archiwum do zaimportowania.", "Select an archive to import first.");
+            ShowMessage("Keine Datei ausgewählt", "No file selected",
+                "Wähle zuerst ein Archiv zum Importieren aus.", "Select an archive to import first.");
             return;
         }
         // Import can add or replace credentials, so authorize it before the
@@ -153,13 +158,13 @@ public partial class ArchiveWindow : Window
             var existing = new HashSet<string>(_service.List(), StringComparer.OrdinalIgnoreCase);
             var conflictCount = archive.Items.Count(item => existing.Contains(item.Name));
             ArchiveInfoText.Text = T.Get(_language,
-                $"Archiwum otwarte. Pozycje do importowania: {archive.Items.Count}.\nIstniejące nazwy: {conflictCount}.",
+                $"Archiv geöffnet. Zu importierende Einträge: {archive.Items.Count}.\nVorhandene Namen: {conflictCount}.",
                 $"Archive opened. Entries to import: {archive.Items.Count}.\nExisting names: {conflictCount}.");
             await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Render);
             if (!StyledDialog.Confirm(this,
-                    T.Get(_language, "Archiwum gotowe do importu", "Archive ready to import"),
+                    T.Get(_language, "Archiv bereit zum Import", "Archive ready to import"),
                     T.Get(_language,
-                        $"Archiwum zawiera {archive.Items.Count} pozycji. Konflikty nazw: {conflictCount}.\n\nCzy przejść do rozwiązywania konfliktów i importu?",
+                        $"Das Archiv enthält {archive.Items.Count} Einträge. Namenskonflikte: {conflictCount}.\n\nMit der Konfliktlösung und dem Import fortfahren?",
                         $"The archive contains {archive.Items.Count} entries. Name conflicts: {conflictCount}.\n\nContinue to conflict resolution and import?"),
                     _language)) return;
             var decisions = ResolveConflicts(archive.Items, existing);
@@ -177,20 +182,20 @@ public partial class ArchiveWindow : Window
                 if (conflict) replaced++; else imported++;
             }
             StatusText.Text = T.Get(_language,
-                $"Dodano: {imported}, zastąpiono: {replaced}, pominięto: {skipped}.",
+                $"Hinzugefügt: {imported}, ersetzt: {replaced}, übersprungen: {skipped}.",
                 $"Added: {imported}, replaced: {replaced}, skipped: {skipped}.");
             RefreshExportCount();
-            StyledDialog.Show(this, T.Get(_language, "Import zakończony", "Import complete"), StatusText.Text, _language);
+            StyledDialog.Show(this, T.Get(_language, "Import abgeschlossen", "Import complete"), StatusText.Text, _language);
         }
         catch (UnauthorizedAccessException)
         {
-            ShowMessage("Nie można otworzyć archiwum", "Could not open archive",
-                "Hasło jest nieprawidłowe albo archiwum zostało uszkodzone.",
-                "The password is incorrect or the archive is damaged.", true);
+            ShowMessage("Archiv konnte nicht geöffnet werden", "Could not open archive",
+                "Das Passwort ist falsch, das Archiv wurde auf einem anderen Windows-Konto oder Gerät erstellt, oder die Datei ist beschädigt.",
+                "The password is incorrect, the archive was created on a different Windows account or device, or the file is damaged.", true);
         }
         catch (Exception ex)
         {
-            ShowOperationError(ex, "Nie udało się zaimportować archiwum.", "Could not import the archive.");
+            ShowOperationError(ex, "Das Archiv konnte nicht importiert werden.", "Could not import the archive.");
         }
         finally
         {
@@ -235,28 +240,30 @@ public partial class ArchiveWindow : Window
 
     private void ApplyLanguage()
     {
-        Title = T.Get(_language, "Import i eksport — Codex Vault", "Import and export — Codex Vault");
-        HeadingText.Text = T.Get(_language, "Import i eksport", "Import and export");
-        DescriptionText.Text = T.Get(_language, "Przenieś lub wykonaj kopię zapasową wszystkich pozycji Codex Vault.", "Move or back up every Codex Vault entry.");
-        ExportHeading.Text = T.Get(_language, "Eksport", "Export");
-        ExportDescription.Text = T.Get(_language, "Zapisz wszystkie sekrety i kody odzyskiwania w jednym pliku.", "Save all secrets and recovery codes in one file.");
-        ProtectExportCheck.Content = T.Get(_language, "Zabezpiecz archiwum hasłem", "Protect archive with a password");
-        ExportPasswordLabel.Text = T.Get(_language, "Hasło", "Password");
-        ConfirmPasswordLabel.Text = T.Get(_language, "Powtórz hasło", "Confirm password");
-        ExportWarningText.Text = T.Get(_language, "Bez hasła zawartość pliku nie będzie zaszyfrowana.", "Without a password, the file contents will not be encrypted.");
-        ExportButton.Content = T.Get(_language, "Eksportuj wszystkie pozycje…", "Export all entries…");
+        Title = T.Get(_language, "Import und Export — Codex Vault", "Import and export — Codex Vault");
+        HeadingText.Text = T.Get(_language, "Import und Export", "Import and export");
+        DescriptionText.Text = T.Get(_language, "Alle Codex-Vault-Einträge verschieben oder sichern.", "Move or back up every Codex Vault entry.");
+        ExportHeading.Text = T.Get(_language, "Export", "Export");
+        ExportDescription.Text = T.Get(_language, "Alle Secrets und Wiederherstellungscodes in einer Datei speichern.", "Save all secrets and recovery codes in one file.");
+        ProtectExportCheck.Content = T.Get(_language, "Archiv mit Passwort schützen", "Protect archive with a password");
+        ExportPasswordLabel.Text = T.Get(_language, "Passwort", "Password");
+        ConfirmPasswordLabel.Text = T.Get(_language, "Passwort wiederholen", "Confirm password");
+        ExportWarningText.Text = T.Get(_language,
+            "Ohne Passwort wird die Datei verschlüsselt, aber nur an dieses Windows-Konto auf diesem Gerät gebunden.",
+            "Without a password, the file is encrypted but bound to this Windows account on this device only.");
+        ExportButton.Content = T.Get(_language, "Alle Einträge exportieren…", "Export all entries…");
         ImportHeading.Text = T.Get(_language, "Import", "Import");
-        ImportDescription.Text = T.Get(_language, "Przywróć pozycje z archiwum .cvault.", "Restore entries from a .cvault archive.");
-        BrowseButton.Content = T.Get(_language, "Wybierz…", "Browse…");
-        ImportPasswordLabel.Text = T.Get(_language, "Hasło archiwum", "Archive password");
-        ConflictLabel.Text = T.Get(_language, "Gdy nazwa już istnieje", "When a name already exists");
+        ImportDescription.Text = T.Get(_language, "Einträge aus einem .cvault-Archiv wiederherstellen.", "Restore entries from a .cvault archive.");
+        BrowseButton.Content = T.Get(_language, "Durchsuchen…", "Browse…");
+        ImportPasswordLabel.Text = T.Get(_language, "Archiv-Passwort", "Archive password");
+        ConflictLabel.Text = T.Get(_language, "Wenn ein Name schon existiert", "When a name already exists");
         ConflictBox.Items.Clear();
-        ConflictBox.Items.Add(new ComboBoxItem { Content = T.Get(_language, "Pytaj dla każdej pozycji", "Ask for each entry"), Tag = "ask" });
-        ConflictBox.Items.Add(new ComboBoxItem { Content = T.Get(_language, "Zastąp wszystkie istniejące", "Replace all existing entries"), Tag = "replace" });
-        ConflictBox.Items.Add(new ComboBoxItem { Content = T.Get(_language, "Pomiń wszystkie istniejące", "Skip all existing entries"), Tag = "skip" });
+        ConflictBox.Items.Add(new ComboBoxItem { Content = T.Get(_language, "Für jeden Eintrag nachfragen", "Ask for each entry"), Tag = "ask" });
+        ConflictBox.Items.Add(new ComboBoxItem { Content = T.Get(_language, "Alle vorhandenen Einträge ersetzen", "Replace all existing entries"), Tag = "replace" });
+        ConflictBox.Items.Add(new ComboBoxItem { Content = T.Get(_language, "Alle vorhandenen Einträge überspringen", "Skip all existing entries"), Tag = "skip" });
         ConflictBox.SelectedIndex = 0;
-        ImportButton.Content = T.Get(_language, "Importuj archiwum", "Import archive");
-        CloseButton.Content = T.Get(_language, "Zamknij", "Close");
+        ImportButton.Content = T.Get(_language, "Archiv importieren", "Import archive");
+        CloseButton.Content = T.Get(_language, "Schließen", "Close");
         ImportPasswordBox.IsEnabled = false;
     }
 
@@ -266,22 +273,22 @@ public partial class ArchiveWindow : Window
         {
             var count = _service.List().Count;
             ExportCountText.Text = T.Get(_language,
-                $"Pozycje do zapisania: {count}",
+                $"Zu speichernde Einträge: {count}",
                 $"Entries to save: {count}");
         }
         catch
         {
             ExportCountText.Text = T.Get(_language,
-                "Nie udało się odczytać liczby pozycji.",
+                "Die Anzahl der Einträge konnte nicht gelesen werden.",
                 "Could not read the entry count.");
         }
     }
 
-    private void ShowOperationError(Exception ex, string polish, string english) =>
-        StyledDialog.Show(this, T.Get(_language, "Błąd", "Error"), $"{T.Get(_language, polish, english)}\n\n{ex.Message}", _language, true);
+    private void ShowOperationError(Exception ex, string german, string english) =>
+        StyledDialog.Show(this, T.Get(_language, "Fehler", "Error"), $"{T.Get(_language, german, english)}\n\n{ex.Message}", _language, true);
 
-    private void ShowMessage(string polishTitle, string englishTitle, string polish, string english, bool error = false) =>
-        StyledDialog.Show(this, T.Get(_language, polishTitle, englishTitle), T.Get(_language, polish, english), _language, error);
+    private void ShowMessage(string germanTitle, string englishTitle, string german, string english, bool error = false) =>
+        StyledDialog.Show(this, T.Get(_language, germanTitle, englishTitle), T.Get(_language, german, english), _language, error);
 
     private static byte[] ReadArchiveFile(string path)
     {

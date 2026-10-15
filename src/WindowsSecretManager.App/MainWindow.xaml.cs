@@ -2,20 +2,28 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using WindowsSecretManager.Core;
 
 namespace WindowsSecretManager.App;
 
 public partial class MainWindow : Window
 {
+    // Idle timeout before protected operations re-lock; matches the 5-minute
+    // default of the idle/session-lock pattern this is modeled on.
+    private const int IdleLockTimeoutSeconds = 300;
+
     private readonly SecretService _service = new(new WindowsCredentialStore());
     private readonly DispatcherTimer _clipboardTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(4) };
-    private UiLanguage _language = UiLanguage.Polish;
+    private readonly DispatcherTimer _idleLockTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private UiLanguage _language = UiLanguage.German;
     private IReadOnlyList<string> _allNames = Array.Empty<string>();
     private bool _showingRecoveryCodes;
     private bool _sessionVerified;
+    private long _lastActivityTicks = Environment.TickCount64;
     private uint _copiedClipboardSequence;
     private string? SelectedName => SecretList.SelectedItem as string;
 
@@ -26,8 +34,43 @@ public partial class MainWindow : Window
         ApplyLanguage();
         _clipboardTimer.Tick += (_, _) => ClearClipboard();
         _statusTimer.Tick += (_, _) => { _statusTimer.Stop(); ApplyStandardStatus(); };
+        _idleLockTimer.Tick += (_, _) => CheckIdleLock();
+        _idleLockTimer.Start();
+        PreviewMouseMove += (_, _) => RecordActivity();
+        PreviewKeyDown += (_, _) => RecordActivity();
+        Activated += (_, _) => RecordActivity();
+        SystemEvents.SessionSwitch += OnSessionSwitch;
         Loaded += MainWindow_Loaded;
-        Closed += (_, _) => { _statusTimer.Stop(); ClearClipboard(); };
+        Closed += (_, _) =>
+        {
+            SystemEvents.SessionSwitch -= OnSessionSwitch;
+            _idleLockTimer.Stop();
+            _statusTimer.Stop();
+            ClearClipboard();
+        };
+    }
+
+    private void RecordActivity() => _lastActivityTicks = Environment.TickCount64;
+
+    private void CheckIdleLock()
+    {
+        if (_sessionVerified && Environment.TickCount64 - _lastActivityTicks >= IdleLockTimeoutSeconds * 1000L)
+            LockSession();
+    }
+
+    private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+    {
+        if (e.Reason == SessionSwitchReason.SessionLock) LockSession();
+    }
+
+    private void LockSession()
+    {
+        if (!_sessionVerified) return;
+        _sessionVerified = false;
+        RecordActivity();
+        ShowTemporaryStatus(
+            "Geschützte Aktionen wurden erneut gesperrt (Inaktivität oder Bildschirmsperre).",
+            "Protected operations were locked again (idle or screen lock).");
     }
 
     private void RefreshList(string? select = null)
@@ -54,7 +97,7 @@ public partial class MainWindow : Window
         {
             var name = _service.Save(dialog.SecretName, secret, false);
             RefreshList(name);
-            ShowTemporaryStatus("Sekret dodano.", "Secret added.");
+            ShowTemporaryStatus("Secret hinzugefügt.", "Secret added.");
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -68,7 +111,7 @@ public partial class MainWindow : Window
         {
             var name = _service.Save(dialog.SecretName, secret, false);
             RefreshList(name);
-            ShowTemporaryStatus("Kody odzyskiwania dodano.", "Recovery codes added.");
+            ShowTemporaryStatus("Wiederherstellungscodes hinzugefügt.", "Recovery codes added.");
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -96,7 +139,7 @@ public partial class MainWindow : Window
                 using var codes = codesDialog.SecretValue;
                 var updatedName = _service.Update(name, codesDialog.SecretName, codes);
                 RefreshList(updatedName);
-                StatusText.Text = T.Get(_language, "Zestaw kodów zaktualizowano.", "Recovery code set rotated.");
+                StatusText.Text = T.Get(_language, "Codesatz aktualisiert.", "Recovery code set rotated.");
             }
             catch (Exception ex) { ShowError(ex); }
             finally { currentValue = string.Empty; }
@@ -109,7 +152,7 @@ public partial class MainWindow : Window
         {
             var updatedName = _service.Update(name, dialog.SecretName, secret);
             RefreshList(updatedName);
-            StatusText.Text = T.Get(_language, "Sekret zaktualizowano.", "Secret rotated.");
+            StatusText.Text = T.Get(_language, "Secret aktualisiert.", "Secret rotated.");
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -125,7 +168,7 @@ public partial class MainWindow : Window
             if (SecretNames.IsRecoveryCodesName(name) || value.Contains('\r') || value.Contains('\n'))
                 new RecoveryCodesViewer(name, value, _language) { Owner = this }.ShowDialog();
             else
-                StyledDialog.Show(this, $"{T.Get(_language, "Wartość", "Value")} — {name}", value, _language);
+                StyledDialog.Show(this, $"{T.Get(_language, "Wert", "Value")} — {name}", value, _language);
         }
         finally { value = string.Empty; }
     }
@@ -136,15 +179,15 @@ public partial class MainWindow : Window
         if (!await EnsureSessionVerifiedAsync()) return;
         using var secret = ReadOrReport(name); if (secret is null) return;
         var value = SecureStringText.Read(secret);
-        try { Clipboard.SetText(value); _copiedClipboardSequence = GetClipboardSequenceNumber(); _clipboardTimer.Stop(); _clipboardTimer.Start(); StatusText.Text = T.Get(_language, "Skopiowano. Schowek zostanie wyczyszczony za 30 sekund.", "Copied. The clipboard will be cleared in 30 seconds."); }
+        try { Clipboard.SetText(value); _copiedClipboardSequence = GetClipboardSequenceNumber(); _clipboardTimer.Stop(); _clipboardTimer.Start(); StatusText.Text = T.Get(_language, "Kopiert. Die Zwischenablage wird in 30 Sekunden geleert.", "Copied. The clipboard will be cleared in 30 seconds."); }
         finally { value = string.Empty; }
     }
 
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedName is not { } name) return;
-        if (!StyledDialog.Confirm(this, T.Get(_language, "Potwierdź usunięcie", "Confirm deletion"), $"{T.Get(_language, "Czy na pewno usunąć wpis?", "Are you sure you want to delete this entry?")}\n\n{name}", _language)) return;
-        try { _service.Delete(name); RefreshList(); StatusText.Text = T.Get(_language, "Wpis usunięto.", "Entry deleted."); }
+        if (!StyledDialog.Confirm(this, T.Get(_language, "Löschen bestätigen", "Confirm deletion"), $"{T.Get(_language, "Diesen Eintrag wirklich löschen?", "Are you sure you want to delete this entry?")}\n\n{name}", _language)) return;
+        try { _service.Delete(name); RefreshList(); StatusText.Text = T.Get(_language, "Eintrag gelöscht.", "Entry deleted."); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -153,13 +196,18 @@ public partial class MainWindow : Window
     {
         if (_sessionVerified) return true;
         _sessionVerified = await WindowsHelloGate.VerifyAsync(_language,
-            T.Get(_language, "dostęp do chronionych operacji", "access protected operations"));
+            T.Get(_language, "Zugriff auf geschützte Aktionen", "access protected operations"));
         if (_sessionVerified)
-            ShowTemporaryStatus("Operacje chronione odblokowano do zamknięcia programu.", "Protected operations are unlocked until the app closes.");
+        {
+            RecordActivity();
+            ShowTemporaryStatus(
+                "Geschützte Aktionen sind freigeschaltet, bis die App schließt, die Sitzung gesperrt wird oder du inaktiv bist.",
+                "Protected operations are unlocked until the app closes, the session locks, or you go idle.");
+        }
         return _sessionVerified;
     }
-    private void ClearClipboard() { _clipboardTimer.Stop(); if (_copiedClipboardSequence == 0 || GetClipboardSequenceNumber() != _copiedClipboardSequence) return; try { Clipboard.Clear(); _copiedClipboardSequence = 0; StatusText.Text = T.Get(_language, "Schowek wyczyszczono.", "Clipboard cleared."); } catch { StatusText.Text = T.Get(_language, "Nie udało się wyczyścić schowka; skopiuj inną wartość.", "Could not clear the clipboard; copy another value."); } }
-    private void ShowError(Exception ex) => StyledDialog.Show(this, T.Get(_language, "Błąd", "Error"), ex.Message, _language, error: true);
+    private void ClearClipboard() { _clipboardTimer.Stop(); if (_copiedClipboardSequence == 0 || GetClipboardSequenceNumber() != _copiedClipboardSequence) return; try { Clipboard.Clear(); _copiedClipboardSequence = 0; StatusText.Text = T.Get(_language, "Zwischenablage geleert.", "Clipboard cleared."); } catch { StatusText.Text = T.Get(_language, "Zwischenablage konnte nicht geleert werden; kopiere einen anderen Wert.", "Could not clear the clipboard; copy another value."); } }
+    private void ShowError(Exception ex) => StyledDialog.Show(this, T.Get(_language, "Fehler", "Error"), ex.Message, _language, error: true);
     private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshList();
     private void Archive_Click(object sender, RoutedEventArgs e)
     {
@@ -179,10 +227,10 @@ public partial class MainWindow : Window
         ApplyStandardStatus(visible.Count);
     }
 
-    private void ShowTemporaryStatus(string polish, string english)
+    private void ShowTemporaryStatus(string german, string english)
     {
         _statusTimer.Stop();
-        StatusText.Text = T.Get(_language, polish, english);
+        StatusText.Text = T.Get(_language, german, english);
         _statusTimer.Start();
     }
 
@@ -199,14 +247,14 @@ public partial class MainWindow : Window
     {
         var query = FilterBox.Text.Trim();
         StatusText.Text = string.IsNullOrEmpty(query)
-            ? T.Get(_language, $"Liczba wpisów: {_allNames.Count}", $"Entries: {_allNames.Count}")
-            : T.Get(_language, $"Wyniki: {visibleCount} z {_allNames.Count}", $"Results: {visibleCount} of {_allNames.Count}");
+            ? T.Get(_language, $"Anzahl Einträge: {_allNames.Count}", $"Entries: {_allNames.Count}")
+            : T.Get(_language, $"Ergebnisse: {visibleCount} von {_allNames.Count}", $"Results: {visibleCount} of {_allNames.Count}");
     }
     private void SecretList_SelectionChanged(object sender, SelectionChangedEventArgs e) { var enabled = SelectedName is not null; RotateButton.IsEnabled = RevealButton.IsEnabled = CopyButton.IsEnabled = DeleteButton.IsEnabled = enabled; }
 
-    private void PolishButton_Click(object sender, RoutedEventArgs e)
+    private void GermanButton_Click(object sender, RoutedEventArgs e)
     {
-        _language = UiLanguage.Polish;
+        _language = UiLanguage.German;
         ApplyLanguage();
         RefreshList(SelectedName);
     }
@@ -220,23 +268,23 @@ public partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
-        SubtitleText.Text = T.Get(_language, "Bezpieczny sejf współdzielonych sekretów", "Secure vault for shared secrets");
-        ListHeadingText.Text = _showingRecoveryCodes ? T.Get(_language, "Zestawy kodów odzyskiwania", "Recovery code sets") : T.Get(_language, "Zapisane poświadczenia", "Stored credentials");
-        NamesOnlyText.Text = _showingRecoveryCodes ? T.Get(_language, "Kody pozostają ukryte do czasu podglądu", "Codes stay hidden until revealed") : T.Get(_language, "Widoczne są wyłącznie nazwy", "Only names are visible");
-        AddButton.Content = _showingRecoveryCodes ? T.Get(_language, "＋  Dodaj kody odzyskiwania", "＋  Add recovery codes") : T.Get(_language, "＋  Dodaj sekret", "＋  Add secret");
-        RecoveryCodesButton.Content = _showingRecoveryCodes ? T.Get(_language, "Sekrety", "Secrets") : T.Get(_language, "Kody odzyskiwania", "Recovery codes");
-        RotateButton.Content = T.Get(_language, "↻  Zmień", "↻  Rotate");
-        RevealButton.Content = _showingRecoveryCodes ? T.Get(_language, "◉  Pokaż kody", "◉  Reveal codes") : T.Get(_language, "◉  Pokaż", "◉  Reveal");
-        CopyButton.Content = T.Get(_language, "▣  Kopiuj", "▣  Copy");
+        SubtitleText.Text = T.Get(_language, "Sicherer Tresor für geteilte Secrets", "Secure vault for shared secrets");
+        ListHeadingText.Text = _showingRecoveryCodes ? T.Get(_language, "Sätze von Wiederherstellungscodes", "Recovery code sets") : T.Get(_language, "Gespeicherte Anmeldedaten", "Stored credentials");
+        NamesOnlyText.Text = _showingRecoveryCodes ? T.Get(_language, "Codes bleiben verborgen, bis sie angezeigt werden", "Codes stay hidden until revealed") : T.Get(_language, "Es sind nur Namen sichtbar", "Only names are visible");
+        AddButton.Content = _showingRecoveryCodes ? T.Get(_language, "＋  Wiederherstellungscodes hinzufügen", "＋  Add recovery codes") : T.Get(_language, "＋  Secret hinzufügen", "＋  Add secret");
+        RecoveryCodesButton.Content = _showingRecoveryCodes ? T.Get(_language, "Secrets", "Secrets") : T.Get(_language, "Wiederherstellungscodes", "Recovery codes");
+        RotateButton.Content = T.Get(_language, "↻  Ändern", "↻  Rotate");
+        RevealButton.Content = _showingRecoveryCodes ? T.Get(_language, "◉  Codes anzeigen", "◉  Reveal codes") : T.Get(_language, "◉  Anzeigen", "◉  Reveal");
+        CopyButton.Content = T.Get(_language, "▣  Kopieren", "▣  Copy");
         CopyButton.Visibility = _showingRecoveryCodes ? Visibility.Collapsed : Visibility.Visible;
-        DeleteButton.Content = T.Get(_language, "Usuń", "Delete");
-        RefreshButton.Content = T.Get(_language, "Odśwież", "Refresh");
-        ArchiveButton.Content = T.Get(_language, "Import / eksport", "Import / export");
-        FilterLabel.Text = T.Get(_language, "Szukaj", "Search");
-        AboutText.Text = T.Get(_language, "O programie", "About");
+        DeleteButton.Content = T.Get(_language, "Löschen", "Delete");
+        RefreshButton.Content = T.Get(_language, "Aktualisieren", "Refresh");
+        ArchiveButton.Content = T.Get(_language, "Import / Export", "Import / export");
+        FilterLabel.Text = T.Get(_language, "Suchen", "Search");
+        AboutText.Text = T.Get(_language, "Über", "About");
         ScopesText.Visibility = _showingRecoveryCodes ? Visibility.Collapsed : Visibility.Visible;
         ApplyStandardStatus();
-        PolishButton.Background = _language == UiLanguage.Polish ? (System.Windows.Media.Brush)FindResource("Accent") : (System.Windows.Media.Brush)FindResource("Surface");
+        GermanButton.Background = _language == UiLanguage.German ? (System.Windows.Media.Brush)FindResource("Accent") : (System.Windows.Media.Brush)FindResource("Surface");
         EnglishButton.Background = _language == UiLanguage.English ? (System.Windows.Media.Brush)FindResource("Accent") : (System.Windows.Media.Brush)FindResource("Surface");
     }
 

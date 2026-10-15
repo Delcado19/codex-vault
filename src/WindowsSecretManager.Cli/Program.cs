@@ -213,6 +213,7 @@ internal static class Program
     private static void WriteSecret(SecureString secret)
     {
         var pointer = Marshal.SecureStringToGlobalAllocUnicode(secret);
+        using var pin = NativeMemoryLock.Pin(pointer, secret.Length * 2);
         try
         {
             for (var index = 0; index < secret.Length; index++)
@@ -231,9 +232,7 @@ internal static class Program
             throw new InvalidOperationException("No interactive terminal is available. Use --yes to confirm deletion.");
         Console.Error.Write($"Delete secret '{name}'? [y/N] ");
         var answer = Console.ReadLine();
-        return string.Equals(answer, "t", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(answer, "tak", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase) ||
+        return string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -282,5 +281,5 @@ Exit codes: 0 = success, 1 = operation failure, 2 = invalid usage,
     }
 
     private static string CurrentVersion =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "nieznana";
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "unknown";
 }
