@@ -1,6 +1,6 @@
 #define AppName "Codex Vault"
 #define AppVersion "1.6.0"
-#define AppPublisher "Arkadiusz Pajda"
+#define AppPublisher "Delcado19"
 #define AppExeName "CodexVault.exe"
 #define PublishDir "..\work\installer-publish-1.6.0"
 #ifndef OutputBaseName
@@ -13,8 +13,8 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
-AppPublisherURL=https://github.com/Artllex/codex-vault
-AppSupportURL=https://github.com/Artllex/codex-vault/issues
+AppPublisherURL=https://github.com/Delcado19/codex-vault
+AppSupportURL=https://github.com/Delcado19/codex-vault/issues
 VersionInfoVersion={#AppVersion}
 VersionInfoCompany={#AppPublisher}
 VersionInfoDescription={#AppName} Installer

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Updated publisher/author metadata (installer, both `.csproj` files, README credits, About window) from the upstream project's original author to this fork's maintainer. `LICENSE`'s original copyright notice is unchanged, as the MIT license requires.
+
 ## 1.6.0 — 2026-10-16
 
 - Removed the forced scope picker (Codex projects / Shared / Application) from the "Add secret" dialog. Names are now free-form in both the GUI and the CLI; the CLI no longer prepends `Codex.Shared/` to a bare name. Existing secrets created under the old prefixes are unaffected and keep working.

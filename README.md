@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Artllex/codex-vault/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Artllex/codex-vault?style=flat-square"></a>
+  <a href="https://github.com/Delcado19/codex-vault/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Delcado19/codex-vault?style=flat-square"></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
   <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-7c6cf2?style=flat-square">
 </p>
@@ -31,7 +31,7 @@ API keys often end up in `.env` files, scripts, terminal history, or source cont
 
 ## Download
 
-Ready-to-use builds are available under **[Releases](https://github.com/Artllex/codex-vault/releases/latest)**:
+Ready-to-use builds are available under **[Releases](https://github.com/Delcado19/codex-vault/releases/latest)**:
 
 - `CodexVault-Setup-1.5.0-win-x64.exe` — installer and in-place upgrade for an older version;
 - `CodexVault-1.5.0-win-x64.zip` — portable version that requires no installation.
@@ -127,6 +127,6 @@ A `v*` tag triggers [`release.yml`](.github/workflows/release.yml): it fails if 
 
 ## Author and license
 
-Arkadiusz Pajda — support and contact through [GitHub Issues](https://github.com/Artllex/codex-vault/issues)
+Delcado19 — support and contact through [GitHub Issues](https://github.com/Delcado19/codex-vault/issues)
 
 Released under the **MIT License**. See [LICENSE](LICENSE) for the full text.
