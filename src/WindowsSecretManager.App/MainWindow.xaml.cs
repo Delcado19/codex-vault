@@ -2,20 +2,28 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using WindowsSecretManager.Core;
 
 namespace WindowsSecretManager.App;
 
 public partial class MainWindow : Window
 {
+    // Idle timeout before protected operations re-lock; matches the 5-minute
+    // default of the idle/session-lock pattern this is modeled on.
+    private const int IdleLockTimeoutSeconds = 300;
+
     private readonly SecretService _service = new(new WindowsCredentialStore());
     private readonly DispatcherTimer _clipboardTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(4) };
+    private readonly DispatcherTimer _idleLockTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private UiLanguage _language = UiLanguage.German;
     private IReadOnlyList<string> _allNames = Array.Empty<string>();
     private bool _showingRecoveryCodes;
     private bool _sessionVerified;
+    private long _lastActivityTicks = Environment.TickCount64;
     private uint _copiedClipboardSequence;
     private string? SelectedName => SecretList.SelectedItem as string;
 
@@ -26,8 +34,43 @@ public partial class MainWindow : Window
         ApplyLanguage();
         _clipboardTimer.Tick += (_, _) => ClearClipboard();
         _statusTimer.Tick += (_, _) => { _statusTimer.Stop(); ApplyStandardStatus(); };
+        _idleLockTimer.Tick += (_, _) => CheckIdleLock();
+        _idleLockTimer.Start();
+        PreviewMouseMove += (_, _) => RecordActivity();
+        PreviewKeyDown += (_, _) => RecordActivity();
+        Activated += (_, _) => RecordActivity();
+        SystemEvents.SessionSwitch += OnSessionSwitch;
         Loaded += MainWindow_Loaded;
-        Closed += (_, _) => { _statusTimer.Stop(); ClearClipboard(); };
+        Closed += (_, _) =>
+        {
+            SystemEvents.SessionSwitch -= OnSessionSwitch;
+            _idleLockTimer.Stop();
+            _statusTimer.Stop();
+            ClearClipboard();
+        };
+    }
+
+    private void RecordActivity() => _lastActivityTicks = Environment.TickCount64;
+
+    private void CheckIdleLock()
+    {
+        if (_sessionVerified && Environment.TickCount64 - _lastActivityTicks >= IdleLockTimeoutSeconds * 1000L)
+            LockSession();
+    }
+
+    private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+    {
+        if (e.Reason == SessionSwitchReason.SessionLock) LockSession();
+    }
+
+    private void LockSession()
+    {
+        if (!_sessionVerified) return;
+        _sessionVerified = false;
+        RecordActivity();
+        ShowTemporaryStatus(
+            "Geschützte Aktionen wurden erneut gesperrt (Inaktivität oder Bildschirmsperre).",
+            "Protected operations were locked again (idle or screen lock).");
     }
 
     private void RefreshList(string? select = null)
@@ -155,7 +198,12 @@ public partial class MainWindow : Window
         _sessionVerified = await WindowsHelloGate.VerifyAsync(_language,
             T.Get(_language, "Zugriff auf geschützte Aktionen", "access protected operations"));
         if (_sessionVerified)
-            ShowTemporaryStatus("Geschützte Aktionen sind bis zum Schließen der App freigeschaltet.", "Protected operations are unlocked until the app closes.");
+        {
+            RecordActivity();
+            ShowTemporaryStatus(
+                "Geschützte Aktionen sind freigeschaltet, bis die App schließt, die Sitzung gesperrt wird oder du inaktiv bist.",
+                "Protected operations are unlocked until the app closes, the session locks, or you go idle.");
+        }
         return _sessionVerified;
     }
     private void ClearClipboard() { _clipboardTimer.Stop(); if (_copiedClipboardSequence == 0 || GetClipboardSequenceNumber() != _copiedClipboardSequence) return; try { Clipboard.Clear(); _copiedClipboardSequence = 0; StatusText.Text = T.Get(_language, "Zwischenablage geleert.", "Clipboard cleared."); } catch { StatusText.Text = T.Get(_language, "Zwischenablage konnte nicht geleert werden; kopiere einen anderen Wert.", "Could not clear the clipboard; copy another value."); } }

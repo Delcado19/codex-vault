@@ -213,6 +213,7 @@ internal static class Program
     private static void WriteSecret(SecureString secret)
     {
         var pointer = Marshal.SecureStringToGlobalAllocUnicode(secret);
+        using var pin = NativeMemoryLock.Pin(pointer, secret.Length * 2);
         try
         {
             for (var index = 0; index < secret.Length; index++)

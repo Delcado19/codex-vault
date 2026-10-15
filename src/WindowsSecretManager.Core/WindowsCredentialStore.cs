@@ -48,6 +48,7 @@ public sealed class WindowsCredentialStore : ISecretStore
     public void Save(string name, SecureString value)
     {
         var secret = Marshal.SecureStringToCoTaskMemUnicode(value);
+        using var pin = NativeMemoryLock.Pin(secret, value.Length * 2);
         try
         {
             var credential = new CREDENTIAL
@@ -67,6 +68,7 @@ public sealed class WindowsCredentialStore : ISecretStore
         try
         {
             var credential = Marshal.PtrToStructure<CREDENTIAL>(ptr);
+            using var pin = NativeMemoryLock.Pin(credential.CredentialBlob, (int)credential.CredentialBlobSize);
             var result = new SecureString();
             var chars = checked((int)credential.CredentialBlobSize / 2);
             for (var i = 0; i < chars; i++) result.AppendChar((char)Marshal.ReadInt16(credential.CredentialBlob, i * 2));

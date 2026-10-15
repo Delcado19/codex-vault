@@ -9,6 +9,8 @@
 - Archive export passwords must now be at least `VaultArchive.MinimumPasswordLength` (8) characters, enforced in `VaultArchive.Create` itself rather than only in the GUI.
 - Replaced the Polish UI language with German: `UiLanguage.Polish` is now `UiLanguage.German`, the language toggle switched from "PL" to "DE", and every bilingual string in the GUI (App project only; the CLI was already English-only) was translated from Polish to German.
 - Hardened CLI output: `WindowsSecretManager.Core` (`SecretNames`, `SecretService`, `WindowsCredentialStore`) and the CLI itself still had leftover Polish exception/fallback text (e.g. `Win32Exception` messages, the `version` fallback, a Polish "tak" delete confirmation). These surfaced unlocalized in the English-only CLI and raw in GUI error dialogs; translated to English. Verified by hand that `get` writes the secret only to stdout, no command writes a secret value to stderr or into an exception message, and the existing char-by-char unmanaged-memory write (never materializing the plaintext as a managed string) was left as-is.
+- Added `NativeMemoryLock` (`VirtualLock`/`VirtualUnlock`, best-effort) in `WindowsSecretManager.Core` and pinned every unmanaged buffer that briefly holds a decrypted secret — `WindowsCredentialStore.Save`/`Read`, the CLI's `get` output, and the GUI's `SecureStringText.Read` — so the OS cannot write that memory to the pagefile while it's in use.
+- Added auto-lock in the GUI: protected operations (reveal, copy, rotate, delete, archive import/export) now re-require Windows Hello after 5 minutes of window inactivity or on a Windows session lock (`Microsoft.Win32.SystemEvents.SessionSwitch`), instead of staying unlocked for the rest of the app's lifetime.
 
 ## 1.4.1 — 2026-09-13
 
