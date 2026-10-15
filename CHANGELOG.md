@@ -6,6 +6,8 @@
 - Fixed long secret names getting clipped instead of wrapping in the reveal dialog's title.
 - The "Edit secret" dialog (formerly labeled "Rotate") now pre-fills the masked value field with the current secret and puts the cursor in the name field, so renaming no longer requires re-entering the value.
 - Renamed the English "Rotate" button and status text to "Edit"/"updated" to match the German "Ändern", and capitalized "Export" consistently with "Import" in the English UI.
+- Recovery-code sets no longer render as a 2-column grid when every line in the pasted/imported text happened to split into two cells (e.g. tab-separated); the viewer now always lists one code per row.
+- The internal `RecoveryCodes/` prefix is no longer shown to the user — it's stripped from the entry name in the main list, the codes viewer, and the archive-import conflict dialog, everywhere the real prefixed name isn't actually needed.
 
 ## 1.5.0 — 2026-10-15
 

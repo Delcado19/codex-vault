@@ -218,7 +218,7 @@ public partial class ArchiveWindow : Window
         }
         foreach (var item in conflicts)
         {
-            var decision = new ArchiveConflictDialog(item.Name, _language) { Owner = this }.ShowChoice();
+            var decision = new ArchiveConflictDialog(RecoveryCodesDisplayName.Strip(item.Name), _language) { Owner = this }.ShowChoice();
             if (decision == ArchiveConflictChoice.Cancel) return null;
             result[item.Name] = decision == ArchiveConflictChoice.Replace;
         }
