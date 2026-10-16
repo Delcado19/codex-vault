@@ -67,6 +67,7 @@ public partial class MainWindow : Window
     {
         if (!_sessionVerified) return;
         _sessionVerified = false;
+        ClearClipboard();
         RecordActivity();
         ShowTemporaryStatus(
             "Geschützte Aktionen wurden erneut gesperrt (Inaktivität oder Bildschirmsperre).",
@@ -186,9 +187,12 @@ public partial class MainWindow : Window
         finally { value = string.Empty; }
     }
 
-    private void Delete_Click(object sender, RoutedEventArgs e)
+    private async void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedName is not { } name) return;
+        // Deletion is destructive like reveal/copy/rotate, so it goes through the same
+        // Windows Hello gate instead of relying on the confirm dialog alone.
+        if (!await EnsureSessionVerifiedAsync()) return;
         if (!StyledDialog.Confirm(this, T.Get(_language, "Löschen bestätigen", "Confirm deletion"), $"{T.Get(_language, "Diesen Eintrag wirklich löschen?", "Are you sure you want to delete this entry?")}\n\n{name}", _language)) return;
         try { _service.Delete(name); RefreshList(); StatusText.Text = T.Get(_language, "Eintrag gelöscht.", "Entry deleted."); }
         catch (Exception ex) { ShowError(ex); }

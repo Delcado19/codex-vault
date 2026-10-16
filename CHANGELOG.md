@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Deleting a secret now requires Windows Hello verification first, consistent with reveal/copy/edit; previously only a confirmation dialog guarded it.
+- Locking the session (screen lock or auto-lock idle timeout) now immediately clears a pending clipboard copy instead of waiting out the 30-second timer.
 - Updated publisher/author metadata (installer, both `.csproj` files, README credits, About window) from the upstream project's original author to this fork's maintainer. `LICENSE`'s original copyright notice is unchanged, as the MIT license requires.
 
 ## 1.6.0 — 2026-10-16
